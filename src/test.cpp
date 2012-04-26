@@ -25,9 +25,10 @@ llvm-ld -v -L/usr/lib/gcc/i686-linux-gnu/4.6/ -o cpp-uri-template src/test.bc -l
 #include <string>
 #include <unordered_map>
 
+#include <boost/algorithm/string/find_iterator.hpp>	//boost::split_iterator
+#include <boost/optional.hpp>
 #include <boost/xpressive/xpressive.hpp>
 
-#include <boost/algorithm/string/find_iterator.hpp>	//boost::split_iterator
 
 //#include "uri_template.hpp"
 
@@ -217,7 +218,6 @@ void initialize()
 template <typename T, size_t Size>
 const T* find( const T (&array)[Size],  T const& value )
 {
-	//return &(array[0]);
 	return std::find( std::begin(array), std::end(array), value );
 }
 
@@ -228,13 +228,16 @@ inline bool is_operator( char chr )
 	return (it != std::end(operators));
 }
 
-std::string escape( std::string const& text )
+
+
+//TODO: see if could be optimized using a Range for safe paramter
+std::string escape( std::string const& text, std::string const& safe = "" )
 {
 	std::stringstream ss;
 
 	for ( auto chr : text )
 	{
-		if ((chr == 0x2D) || (chr == 0x2E) || (chr == 0x2F) || // Hyphen-Minus, Full Stop, Slash¿?
+		if ((chr == 0x2D) || (chr == 0x2E) || //(chr == 0x2F) || // Hyphen-Minus, Full Stop, Slash¿?
 		   ((0x30 <= chr) && (chr <= 0x39)) || // Digits [0-9]
 		   ((0x41 <= chr) && (chr <= 0x5A)) || // Uppercase [A-Z]
 		   ((0x61 <= chr) && (chr <= 0x7A)))   // Lowercase [a-z]
@@ -243,8 +246,25 @@ std::string escape( std::string const& text )
 		}
 		else
 		{
-			ss << '%';
-			ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned short>(chr);
+			if ( safe.size() != 0 )
+			{
+				auto it = std::find( std::begin(safe), std::end(safe), chr);
+				if (it != std::end(safe))
+				{
+					ss << chr;
+				}
+				else
+				{
+					ss << '%';
+					ss << std::setw(2) << std::setfill( '0' ) << std::hex << std::uppercase << static_cast<unsigned short>(chr);
+				}
+			}
+			else
+			{
+				ss << '%';
+				//ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned short>(chr);
+				ss << std::setw(2) << std::setfill( '0' ) << std::hex << std::uppercase << static_cast<unsigned short>(chr);
+			}
 		}
 	}
 
@@ -252,17 +272,38 @@ std::string escape( std::string const& text )
 }
 
 
-//TODO: naive function for test only... need refactor...
-//std::string const& format_fun(smatch const& what)
+template <typename Map>
+boost::optional<typename Map::mapped_type> get_map_item( Map const& map, typename Map::key_type const& key )
+{
+	typename Map::const_iterator it = map.find(key);
+
+	if ( it != map.end() )
+	{
+		return boost::optional<typename Map::mapped_type>(it->second);
+	}
+	else
+	{
+		return boost::optional<typename Map::mapped_type>();
+	}
+}
+
+
+
+
+
+
+//TODO: naive function for test only... need refactor (code clean & performance)
+
 std::string format_fun(smatch const& what)
 {
-	//TODO: Procesar caracteres especiales en variables.second
-		//Ejemplo ["{hello}", "Hello%20World%21"],
-	//OPERATOR = "+./;?|!@"
+	//TODO:
+		// + operator and encoding
+		// =default
+		//OPERATOR = "+./;?|!@"
 
 
 	auto text = what[1].str();
-	std::string variable_name = "";
+	std::string variable_name = "";			//TODO: rename variable_name
 
 	char op = 0;
 
@@ -290,30 +331,81 @@ std::string format_fun(smatch const& what)
 
     for ( ; it != end; ++it )
     {
-        std::string item = boost::copy_range<std::string>(*it);
-        //std::cout << item << std::endl;
+        std::string key = boost::copy_range<std::string>(*it);
+        //std::cout << key << std::endl;
 
-        std::string var_value = variables[ item ];	//TODO: ver si puedo usar rangos o vistas (de strings) para buscar en el Map
-        var_value = escape(var_value);
+        //std::string var_value = variables[ item ];	//TODO: ver si puedo usar rangos o vistas (de strings) para buscar en el Map
 
-    	if ( op == '+' && ! first )
-    	{
-    		//if ( result != "" )		//TODO: verificar {empty,empty,empty}
-    		//{
-    			result += ',';
-    		//}
-    	}
+        auto item = get_map_item(variables, key);		//TODO: ver si puedo usar rangos o vistas (de strings) para buscar en el Map
 
-    	if ( op == '/' && ! first )
-    	{
-    		//if ( result != "" )		//TODO: verificar {empty,empty,empty}
-    		//{
-    			result += '/';
-    		//}
-    	}
-    	first = false;
+        if (item)
+        {
+        	std::string var_value = *item;
 
-        result += var_value;
+        	std::string safe = "";
+        	if ( op == '+' )
+        	{
+        		safe = ":/?#[]@!$&'()*+,;=";
+        	}
+
+			var_value = escape(var_value, safe);
+
+			if ( op == 0 && ! first )
+			{
+				//if ( var_value != "" )		//TODO: verificar {empty,empty,empty}
+				//{
+					result += ',';
+				//}
+			}
+
+			if ( op == '+' && ! first )
+			{
+				//if ( var_value != "" )		//TODO: verificar {empty,empty,empty}
+				//{
+					result += ',';
+				//}
+			}
+
+			if ( op == '/' && ! first )
+			{
+				//if ( var_value != "" )		//TODO: verificar {empty,empty,empty}
+				//{
+					result += '/';
+				//}
+			}
+
+			if ( op == ';' )
+			{
+				if ( ! first )
+				{
+					result += ';';
+				}
+
+				result += key;
+				if ( var_value != "" )
+				{
+					result += '=';
+				}
+			}
+
+			if ( op == '?' )
+			{
+				if ( ! first )
+				{
+					result += '&';
+				}
+
+				result += key;
+				if ( var_value != "" )
+				{
+					result += '=';
+				}
+			}
+
+			first = false;
+
+			result += var_value;
+        }
     }
 
 
@@ -334,7 +426,21 @@ std::string format_fun(smatch const& what)
 		}
 	}
 
+	if ( op == ';' )
+	{
+		if ( result != "" )
+		{
+			result = op + result;	//TODO: copy
+		}
+	}
 
+	if ( op == '?' )
+	{
+		if ( result != "" )
+		{
+			result = op + result;	//TODO: copy
+		}
+	}
 
 	// std::cout << result << std::endl;
 	return result;
