@@ -1,8 +1,23 @@
-// g++ -I"D:\Program Files\Boost\boost_1_49_0" -std=c++11 test.cpp
+// g++     -I"D:\Program Files\Boost\boost_1_49_0" -std=c++11 test.cpp
+// clang++ -I$BOOST_ROOT -std=c++11 test.cpp
+// clang++ -I$BOOST_ROOT -std=c++11 -stdlib=libc++ test.cpp				--runtime error
+
 
 // http://tools.ietf.org/html/rfc6570
 // http://code.google.com/p/uri-templates/source/browse/trunk/testdata.json
 
+// Eliminado -- Compiler optimization flags: -emit-llvm
+// Eliminado -- Compiler other flags: -c
+
+/*
+
+${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT}
+
+clang++ -I/home/fernando/software/boost/boost_1_49_0 -O0 -g3 -Wall -c -fmessage-length=0 -std=c++11 -o src/test.bc ../src/test.cpp
+llvm-ld -v -L/usr/lib/gcc/i686-linux-gnu/4.6/ -o cpp-uri-template src/test.bc -lstdc++
+
+
+ */
 
 
 #include <algorithm>
@@ -11,6 +26,8 @@
 #include <unordered_map>
 
 #include <boost/xpressive/xpressive.hpp>
+
+#include <boost/algorithm/string/find_iterator.hpp>	//boost::split_iterator
 
 //#include "uri_template.hpp"
 
@@ -204,49 +221,123 @@ const T* find( const T (&array)[Size],  T const& value )
 	return std::find( std::begin(array), std::end(array), value );
 }
 
-template <typename T, size_t Size>
-const T* array_end( const T (&array)[Size] )
+//TODO: use compile time metafunction
+inline bool is_operator( char chr )
 {
-	return &(array[Size]);
+	auto it = find(operators, chr);
+	return (it != std::end(operators));
+}
+
+std::string escape( std::string const& text )
+{
+	std::stringstream ss;
+
+	for ( auto chr : text )
+	{
+		if ((chr == 0x2D) || (chr == 0x2E) || (chr == 0x2F) || // Hyphen-Minus, Full Stop, Slash¿?
+		   ((0x30 <= chr) && (chr <= 0x39)) || // Digits [0-9]
+		   ((0x41 <= chr) && (chr <= 0x5A)) || // Uppercase [A-Z]
+		   ((0x61 <= chr) && (chr <= 0x7A)))   // Lowercase [a-z]
+		{
+			ss << chr;
+		}
+		else
+		{
+			ss << '%';
+			ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned short>(chr);
+		}
+	}
+
+	return ss.str();	//TODO: verify copy elision ...
 }
 
 
-//template<class InputIterator, class T>
-//InputIterator find ( InputIterator first, InputIterator last, const T& value )
-//{
-//	for ( ;first!=last; first++) if ( *first==value ) break;
-//	return first;
-//}
-
-
-
-std::string const& format_fun(smatch const& what)
+//TODO: naive function for test only... need refactor...
+//std::string const& format_fun(smatch const& what)
+std::string format_fun(smatch const& what)
 {
 	//TODO: Procesar caracteres especiales en variables.second
 		//Ejemplo ["{hello}", "Hello%20World%21"],
+	//OPERATOR = "+./;?|!@"
 
 
 	auto text = what[1].str();
+	std::string variable_name = "";
 
+	char op = 0;
 
-	char op;
-
-	auto chr = text[0];
-
-	auto xxx = find(operators, chr);
-	if (xxx != std::end(operators))
+	if ( is_operator( text[0] ) )
 	{
-		op = chr;
+		op = text[0];
+		variable_name = text.substr(1, text.size()-1);		//TODO: i dont want to copy the string
+		//std::cout << variable_name << std::endl;
+	}
+	else
+	{
+		variable_name = text;								//TODO: i dont want to copy the string
+	}
+
+	//TODO: hacer Split de variable_name por comma ',' e ir concatenando los resultados
+
+	std::string result;		//TODO: ver de reemplazar por un stringstream
+
+
+    typedef boost::split_iterator<std::string::iterator> string_split_iterator;
+
+    string_split_iterator it = boost::make_split_iterator(variable_name, boost::first_finder(",", boost::is_iequal()));
+    string_split_iterator end;
+    bool first = true;
+
+    for ( ; it != end; ++it )
+    {
+        std::string item = boost::copy_range<std::string>(*it);
+        //std::cout << item << std::endl;
+
+        std::string var_value = variables[ item ];	//TODO: ver si puedo usar rangos o vistas (de strings) para buscar en el Map
+        var_value = escape(var_value);
+
+    	if ( op == '+' && ! first )
+    	{
+    		//if ( result != "" )		//TODO: verificar {empty,empty,empty}
+    		//{
+    			result += ',';
+    		//}
+    	}
+
+    	if ( op == '/' && ! first )
+    	{
+    		//if ( result != "" )		//TODO: verificar {empty,empty,empty}
+    		//{
+    			result += '/';
+    		//}
+    	}
+    	first = false;
+
+        result += var_value;
+    }
+
+
+
+	if ( op == '.' )
+	{
+		if ( result != "" )
+		{
+			result = op + result;	//TODO: copy
+		}
+	}
+
+	if ( op == '/' )
+	{
+		if ( result != "" )
+		{
+			result = op + result;	//TODO: copy
+		}
 	}
 
 
 
-
-
-
-	//OPERATOR = "+./;?|!@"
-
-	return variables[ text ];
+	// std::cout << result << std::endl;
+	return result;
 }
 
 
@@ -267,8 +358,20 @@ void test( std::string const& uritemplate, std::string const& expected )
 }
 
 
+
+
+
+
+
+
+
+
+
 int main( /* int argc, char* argv[] */ )
 {
+	//std::cout << escape("Hello World!") << std::endl;
+
+
 	initialize();
 
 	//for ( auto item : testcases )
