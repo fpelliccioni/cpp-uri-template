@@ -1,4 +1,5 @@
-// clang++     -std=c++11 clang_error.cpp
+// clang++ -std=c++11 clang_error.cpp
+// g++ -std=c++11 clang_error.cpp
 
 #include <iostream>
 #include <type_traits>
@@ -53,7 +54,7 @@ int main( /* int argc, char* argv[] */ )
 	other_variant<int, double> ov;
 	ov.init(15.0);
 	std::cout << ov.get<double>() << std::endl;
-	std::cout << ov.get<int>() << std::endl;
+	std::cout << ov.get<int>() << std::endl;			//Compile-time error
 
 	return 0;
 }
