@@ -19,15 +19,21 @@ llvm-ld -v -L/usr/lib/gcc/i686-linux-gnu/4.6/ -o cpp-uri-template src/test.bc -l
 
  */
 
-
+#include <array>
 #include <algorithm>
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include <boost/algorithm/string/find_iterator.hpp>	//boost::split_iterator
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
 #include <boost/optional.hpp>
+#include <boost/variant.hpp>
 #include <boost/xpressive/xpressive.hpp>
+
+#include <boost/spirit/include/support_utree.hpp>
 
 
 //#include "uri_template.hpp"
@@ -57,7 +63,7 @@ void initialize()
 #ifndef _MSC_VER
 
 	variables = {
-		{"var"   , "value"}
+		  {"var"   , "value"}
 		, {"hello" , "Hello World!"}
 		, {"empty" , ""}
 		, {"path"  , "/foo/bar"}
@@ -294,14 +300,8 @@ boost::optional<typename Map::mapped_type> get_map_item( Map const& map, typenam
 
 //TODO: naive function for test only... need refactor (code clean & performance)
 
-std::string format_fun(smatch const& what)
+std::string format_fun( smatch const& what )
 {
-	//TODO:
-		// + operator and encoding
-		// =default
-		//OPERATOR = "+./;?|!@"
-
-
 	auto text = what[1].str();
 	std::string variable_name = "";			//TODO: rename variable_name
 
@@ -318,6 +318,13 @@ std::string format_fun(smatch const& what)
 		variable_name = text;								//TODO: i dont want to copy the string
 	}
 
+	std::string safe = "";		//TODO: no usar string, usar un char array
+	if ( op == '+' )
+	{
+		safe = ":/?#[]@!$&'()*+,;=";
+	}
+
+
 	//TODO: hacer Split de variable_name por comma ',' e ir concatenando los resultados
 
 	std::string result;		//TODO: ver de reemplazar por un stringstream
@@ -331,10 +338,25 @@ std::string format_fun(smatch const& what)
 
     for ( ; it != end; ++it )
     {
-        std::string key = boost::copy_range<std::string>(*it);
-        //std::cout << key << std::endl;
+        std::string data = boost::copy_range<std::string>(*it);	//TODO: ver
 
-        //std::string var_value = variables[ item ];	//TODO: ver si puedo usar rangos o vistas (de strings) para buscar en el Map
+    	//typedef std::vector<std::string> vector_type;
+    	typedef std::vector< boost::iterator_range<std::string::iterator> > vector_type;
+
+    	vector_type SplitVec;
+    	boost::split( SplitVec, data, boost::is_any_of("="), boost::token_compress_on ); // SplitVec == { "hello abc","ABC","aBc goodbye" }
+
+
+
+
+    	std::string key = boost::copy_range<std::string>(SplitVec[0]);		//TODO: feo
+    	std::string default_value;
+    	if ( SplitVec.size() == 2 )
+    	{
+    		default_value = boost::copy_range<std::string>(SplitVec[1]);		//TODO: feo
+    	}
+
+
 
         auto item = get_map_item(variables, key);		//TODO: ver si puedo usar rangos o vistas (de strings) para buscar en el Map
 
@@ -342,11 +364,7 @@ std::string format_fun(smatch const& what)
         {
         	std::string var_value = *item;
 
-        	std::string safe = "";
-        	if ( op == '+' )
-        	{
-        		safe = ":/?#[]@!$&'()*+,;=";
-        	}
+
 
 			var_value = escape(var_value, safe);
 
@@ -406,6 +424,13 @@ std::string format_fun(smatch const& what)
 
 			result += var_value;
         }
+        else
+        {
+        	if ( ! default_value.empty() )
+        	{
+        		result += default_value;
+        	}
+        }
     }
 
 
@@ -463,19 +488,137 @@ void test( std::string const& uritemplate, std::string const& expected )
 	}
 }
 
+//------------------------------------------------------------------------
+
+template <typename T1, typename T2>
+struct my_variant_type
+{
+	template <typename T>
+	my_variant_type( T const& t )
+	{
+		std::cout << typeid(t).name() << std::endl;
+	}
+
+	template <typename T>
+	my_variant_type( std::initializer_list<T> const& t )
+	{
+		std::cout << typeid(t).name() << std::endl;
+	}
+};
 
 
+//------------------------------------------------------------------------
 
+template <typename ...Ts>
+struct other_variant {};
 
+template <typename T, typename ...Ts>
+struct other_variant<T, Ts...> : other_variant<Ts...> //private other_variant<Ts...>
+{
+	typedef other_variant<Ts...> base;
 
+//private:
+	//T head_;
 
+	union U
+	{
+		T e;
+	} u;
+};
 
-
-
+//------------------------------------------------------------------------
 
 int main( /* int argc, char* argv[] */ )
 {
-	//std::cout << escape("Hello World!") << std::endl;
+//	//typedef boost::variant<std::string, std::vector<std::string>> variant_type;
+//	typedef boost::variant<std::string, std::initializer_list<std::string>> variant_type;
+//	using strmap_temp = std::map<std::string, variant_type>;
+//
+//	//, {"key3", {"val1", "val2", "val3"} }
+//
+//	strmap_temp my_map = {
+//			  {"key1", "value1"}
+//			, {"key2", "value2"}
+//	};
+//
+//	variant_type vt = "val";
+//	variant_type vt2 = { "val", "val2" };
+//	auto xxx = { "val", "val2" };
+//
+//	std::cout << typeid(xxx).name() << std::endl;
+//
+//	std::initializer_list<std::string> is;
+
+
+	typedef my_variant_type<std::string, std::vector<std::string>> variant_type;
+
+	variant_type vt = "fer";
+	variant_type vt2 = {"fer"};
+	variant_type vt3 = {"fer", "fer2"};
+
+	//std::vector<std::string> v = {"fer", "fer2"};
+
+
+	boost::spirit::utree u = "fer";
+	//boost::spirit::utree u2 = {"fer", "fer2"};
+
+
+	typedef other_variant<int, double> ov_type;
+
+	ov_type ov;
+	other_variant<int> ov2;
+	other_variant<> ov3;
+
+	std::cout << typeid(ov.u.e).name() << std::endl;
+	std::cout << typeid(ov::base.u.e).name() << std::endl;
+
+
+
+//	union U
+//	{
+//		int i;
+//	};
+//
+//	std::cout << sizeof(U) << std::endl;
+//
+//	union U2
+//	{
+//		int i;
+//		float f;
+//	};
+//
+//	std::cout << sizeof(U2) << std::endl;
+//
+//	union U3
+//	{
+//		int i;
+//		float f;
+//		U2 u2;
+//	};
+//
+//	std::cout << sizeof(U3) << std::endl;
+//
+//
+//	union U4
+//	{
+//		double d;
+//		U3 u3;
+//	};
+//
+//	std::cout << sizeof(U4) << std::endl;
+//
+//	U4 u4;
+//
+//	u4.u3.u2.i = 654;
+//	std::cout << u4.u3.u2.i << std::endl;
+//	std::cout << u4.d << std::endl;
+
+
+
+	//------------------------------------------------------------------------
+
+
+
 
 
 	initialize();
