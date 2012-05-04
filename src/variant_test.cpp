@@ -60,10 +60,32 @@ struct other_variant_base<Derived, T, Ts...> : other_variant_base<other_variant_
 {
 	typedef other_variant_base<other_variant_base<Derived, T, Ts...>, Ts...> base;
 
+	//size_t which() const 
+	//{
+	//	return static_cast<Derived*>(this)->which();
+	//}
+
+	//void set_which( size_t which ) 
+	//{
+	//	static_cast<Derived*>(this)->set_which( which );
+	//}
+
+	inline Derived* derived()
+	{
+		return static_cast<Derived*>(this);
+	}
+
 	char* storage()
 	{
-		return static_cast<Derived*>(this)->storage();
+		return derived()->storage();
 	}
+
+	template <typename T2>
+	void set_t()
+	{
+		derived()->set_t<T2>();
+	}
+
 
 //	other_variant_base( T const& value )		//	//TODO: necesito "inheriting constructors"
 
@@ -74,8 +96,9 @@ struct other_variant_base<Derived, T, Ts...> : other_variant_base<other_variant_
 
 		new(p) T(value);
 
-		//std::cout << typeid(*this).name() << std::endl;
-		std::cout << typeid(T).name() << ": " << value << std::endl;
+		set_t<T>();
+
+		//std::cout << typeid(T).name() << ": " << value << std::endl;
 	}
 
 	using base::get;
@@ -85,17 +108,7 @@ struct other_variant_base<Derived, T, Ts...> : other_variant_base<other_variant_
 	get()
 	{
 		auto p = storage();
-
-		auto x = *(reinterpret_cast<T*>(p));
-
-		std::cout << "x " << x << std::endl;
-
-		return x;
-
-		//std::cout << "-------------" << std::endl;
-		//std::cout << "T " << typeid(T2).name() << std::endl;
-		//std::cout << "T2 " << typeid(T2).name() << std::endl;
-		//std::cout << typeid(*this).name() << std::endl;
+		return *(reinterpret_cast<T*>(p));
 	}
 
 
@@ -109,15 +122,38 @@ struct other_variant : other_variant_base<other_variant<T, Ts...>, T, Ts...>
 	typedef other_variant_base<other_variant<T, Ts...>, T, Ts...> base;
 	static constexpr size_t size_ = max<Sizeof, T, Ts...>::value;
 	char storage_[size_];	//TODO: ver alignment
+	size_t which_;
+	bool initialized = false;
 
-	char* storage()
+	inline size_t which() const 
+	{
+		return which_;
+	}
+
+	inline void set_which( size_t which ) 
+	{
+		which_ = which;
+	}
+
+	inline char* storage()
 	{
 		return storage_;
+	}
+
+	template <typename T2>
+	inline void set_t()
+	{
+		constexpr auto index = index_of<T2, T, Ts...>::value;
+		//std::cout << "index " << index << std::endl;
+		set_which(index);
+		initialized = true;
 	}
 
 	~other_variant() 
 	{
 		//reinterpret_cast<const T*>(data)->~T();
+		std::cout << "which(): " << which() << std::endl;
+		std::cout << "initialized: " << initialized << std::endl;
 	}
 };
 
@@ -156,40 +192,11 @@ struct my_type
 	int c;
 };
 
-//------------------------------------------------------------------------
-
-template <size_t Index, typename Elem, typename ...Ts>
-struct find_helper {};
-
-template <size_t Index, typename Elem, typename Current, typename ...Ts>
-struct find_helper<Index, Elem, Current, Ts...>
-{
-	typedef typename std::conditional<
-		std::is_same<Elem, Current>::value
-		, std::integral_constant<size_t, Index>
-		, typename find_helper<Index+1, Elem, Ts...>::type
-	>::type type;
-};
-
-template <typename Elem, typename ...Ts>
-struct find
-{
-	typedef typename find_helper<0, Elem, Ts...>::type type;
-};
-
-//------------------------------------------------------------------------
 
 
 
 int main( /* int argc, char* argv[] */ )
 {
-
-	typedef find<int, double, std::string, int>::type ftype;
-
-	std::cout << typeid(ftype).name() << std::endl;
-
-
-
 	typedef other_variant<int, double> ov_type;
 
 	//std::cout << typeid(ov_type).name() << std::endl;
@@ -198,10 +205,6 @@ int main( /* int argc, char* argv[] */ )
 	//std::cout << typeid(ov_type::base::base::base).name() << std::endl;
 		
 	ov_type ov;
-	
-	std::cout << ov.size_ << std::endl;
-	std::cout << sizeof(ov) << std::endl;
-	//std::cout << "ov.storage_: " << (unsigned int) ov.storage_ << std::endl;
 
 	ov.init(15);
 	std::cout << "get: " << get<int>(ov) << std::endl;
@@ -213,14 +216,16 @@ int main( /* int argc, char* argv[] */ )
 
 
 	other_variant<int, double, std::string> ov2;
-	std::cout << sizeof(ov2) << std::endl;
+	//std::cout << sizeof(ov2) << std::endl;
 
 	ov2.init("fer");
 	std::cout << "get: " << get<std::string>(ov2) << std::endl;
 
 
-	std::cout << sizeof(my_type) << std::endl;
-	std::cout << alignof(my_type) << std::endl;
+	other_variant<int, double, std::string> ov3;
+
+	//std::cout << sizeof(my_type) << std::endl;
+	//std::cout << alignof(my_type) << std::endl;
 	
 
 	

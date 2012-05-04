@@ -76,4 +76,58 @@ public:
 };
 
 
+
+
+
+
+
+
+
+
+//------------------------------------------------------------------------
+
+namespace detail {
+
+template <size_t Index, typename Elem, typename ...Ts>
+struct index_of_helper;
+//If see an error here. The List doesn't contains the T you are finding.
+//{
+//typedef typename std::integral_constant<size_t, -1>::type type;
+//};
+
+
+template <size_t Index, typename Elem, typename Current, typename ...Ts>
+struct index_of_helper<Index, Elem, Current, Ts...>
+{
+	typedef typename std::conditional<
+		std::is_same<Elem, Current>::value
+		, std::integral_constant<size_t, Index>
+		, index_of_helper<Index+1, Elem, Ts...>
+	>::type temp_type;
+
+	typedef typename temp_type::type type;
+
+	//static constexpr size_t value = type::value;
+
+};
+
+}	//namespace detail
+
+template <typename Elem, typename ...Ts>
+struct index_of
+{
+private:
+	typedef typename detail::index_of_helper<0, Elem, Ts...>::type type;
+public:
+	static constexpr size_t value = type::value;
+};
+
+//------------------------------------------------------------------------
+
+
+
+
+
+
+
 #endif // tmp_utils_HPP__
