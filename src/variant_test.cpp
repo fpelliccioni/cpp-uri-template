@@ -194,9 +194,37 @@ struct my_type
 
 
 
+void f()
+{
+	std::cout << "f()" << std::endl;
+}
+
+struct A
+{
+	~A()
+	{
+		std::cout << "~A()" << std::endl;
+	}
+};
+
 
 int main( /* int argc, char* argv[] */ )
 {
+	//void(*pf) pf;
+	using pf_type = void (*)();
+
+	pf_type pf = &f;
+	pf();
+
+	A a;
+
+	
+
+	pf_type pf2 = a.~A();
+
+	
+
+
 	typedef other_variant<int, double> ov_type;
 
 	//std::cout << typeid(ov_type).name() << std::endl;
