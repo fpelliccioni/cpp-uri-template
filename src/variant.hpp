@@ -293,14 +293,13 @@ public:	//protected:		//private:
 
 	struct destroyer
 	{
-	typedef void result_type;
+		typedef void result_type;
 
-	template <typename T>
-	void
-	operator()(T& t) const
-	{
-		t.~T();
-	}
+		template <typename T>
+		void operator()(T& t) const
+		{
+			t.~T();
+		}
 	};
 
 	template <size_t Which, typename... MyTypes>
@@ -329,8 +328,8 @@ public:	//protected:		//private:
 	template <size_t Which>
 	struct initialiser<Which>
 	{
-	//this should never match
-	void initialise();
+		//this should never match
+		void initialise();
 	};
 
 public:
@@ -370,8 +369,10 @@ public:
 	{
 		static_assert( ! std::is_same<variant_base<First, Types...>&, T>::value, "why is variant_base(T&&) instantiated with a variant_base?");
 
+		std::cout << "variant_base( T&& t )" << std::endl;
+
 		//compile error here means that T is not unambiguously convertible to any of the types in (First, Types...)
-		initialiser<0, First, Types...>::initialise(*this, std::forward<T>(t));
+		initialiser<0, First, Types...>::template initialise(*this, std::forward<T>(t));
 	}
 
 	//template < typename T >
@@ -501,36 +502,33 @@ private:
 };
 
 template <typename First, typename... Types>
-struct jjjvariant : public variant_base<First, Types...>
+struct variant : public variant_base<First, Types...>
 {
-	typedef variant_base<First, Types...> base;
+	//typedef variant_base<First, Types...> base;
 
-	using base::initialiser;
+	//using typename variant_base<First, Types...>::initialiser;
 
 	template <
 		typename T
-		//, typename Dummy = typename std::enable_if<
-		//						!std::is_same<
-		//							typename std::remove_reference<variant<First, Types...>>::type,
-		//							typename std::remove_reference<T>::type
-		//						>::value,
-		//						T
-		//					>::type
+		, typename Dummy = typename std::enable_if<
+								!std::is_same<
+									typename std::remove_reference<variant<First, Types...>>::type,
+									typename std::remove_reference<T>::type
+								>::value,
+								T
+							>::type
 		>
-	jjjvariant( T&& t )
+	variant( T&& t )
 	{
-		//static_assert( ! std::is_same<variant<First, Types...>&, T>::value, "why is variant(T&&) instantiated with a variant?");
-
-
+		std::cout << "variant( T&& t )" << std::endl;
+		static_assert( ! std::is_same<variant<First, Types...>&, T>::value, "why is variant(T&&) instantiated with a variant?");
 		//static_cast<base*>(this);
-
-		
-
-		initialiser<0, First, Types...> ii;
-		
 
 		//compile error here means that T is not unambiguously convertible to any of the types in (First, Types...)
 		//initialiser<0, First, Types...>::initialise(*this, std::forward<T>(t));
+
+		//variant_base<First, Types...>::template initialiser<0, First, Types...>::initialise(*this, std::forward<T>(t));
+		variant_base<First, Types...>::template initialiser<0, First, Types...>::initialise(*this, std::forward<T>(t));
 	}
 
 
