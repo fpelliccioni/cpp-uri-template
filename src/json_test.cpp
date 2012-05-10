@@ -370,12 +370,9 @@ typedef my_pair_type<std::string, my_vector_type<string> > pair_type_5;
 
 
 
-
-
-
 void foo( pair_type p )
 {
-
+7
 }
 
 

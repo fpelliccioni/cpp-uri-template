@@ -54,11 +54,11 @@ struct my_pair
 	T t_;
 	U u_;
 
-	my_pair( T const& t, U const& u )
-		: t_( t ), u_( u )
-	{
-		std::cout << "pair ctor" << std::endl;
-	}
+//	my_pair( T const& t, U const& u )
+//		: t_( t ), u_( u )
+//	{
+//		std::cout << "pair ctor" << std::endl;
+//	}
 
 //	my_pair( T && t, U && u )
 //		: t_( std::forward<T>(t) ), u_( std::forward<U>(u) )
@@ -99,15 +99,11 @@ using namespace std;
 typedef std::pair<std::string, my_vector<string> > pair_type_4;
 typedef my_pair<std::string, my_vector<string> > pair_type_5;
 
-
-
 int main( /* int argc, char* argv[] */ )
 {
 
 	//pair_type_4 p6_b ("list",  { "val1", "val2", "val3" }  );
-	pair_type_4 p7_b ("list", my_vector<string>() );
-
-
+	//pair_type_4 p7_b ("list", my_vector<string>() );
 	//pair_type_5 p6 ("list", { "val1", "val2", "val3" } );
 	//pair_type_5 p7 ("list", my_vector<string>() );
 
