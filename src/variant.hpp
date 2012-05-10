@@ -181,13 +181,13 @@ public:	//protected:		//private:
 	template <typename T>
 	struct Sizeof
 	{
-	static constexpr size_t value = sizeof(T);
+		static constexpr size_t value = sizeof(T);
 	};
 
 	template <typename T>
 	struct Alignof
 	{
-	static constexpr size_t value = alignof(T);
+		static constexpr size_t value = alignof(T);
 	};
 
 	//size = max of size of each thing
