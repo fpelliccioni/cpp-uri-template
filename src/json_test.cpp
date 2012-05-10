@@ -1,6 +1,7 @@
 // clang++ -std=c++11 json_test.cpp
 // clang++ -std=c++11 -stdlib=libc++ json_test.cpp
 // g++ -std=c++0x json_test.cpp
+// g++ -std=c++11 json_test.cpp
 
 #include <iostream>
 #include <list>
@@ -44,7 +45,9 @@ struct simple_json
 private:
 	static constexpr size_t size_ = max<Sizeof, string_type, vector_type, map_type>::value;
 
-	alignas(max<Alignof, string_type, vector_type, map_type>::value) char storage_[size_];
+	//alignas(max<Alignof, string_type, vector_type, map_type>::value) char storage_[size_];	//not supported by GCC 4.7.1
+	char storage_[size_];
+	
 	storage_type_enum storage_type_ = storage_type_enum::nil;
 
 
