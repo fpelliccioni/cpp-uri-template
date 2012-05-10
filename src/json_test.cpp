@@ -324,10 +324,18 @@ struct my_pair_type
 		std::cout << "pair ctor" << std::endl;
 	}
 
-	my_pair_type( T && t, U && u )
-		: t_( std::forward<T>(t) ), u_( std::forward<U>(u) )
+
+//	my_pair_type( T && t, U && u )
+//		: t_( std::forward<T>(t) ), u_( std::forward<U>(u) )
+//	{
+//		std::cout << "pair ctor - move" << std::endl;
+//	}
+
+	template<typename T2, typename U2>
+	my_pair_type(T2&& t, U2&& u)
+		: t_( std::forward<T2>(t) ), u_( std::forward<U2>(u) )
 	{
-		std::cout << "pair ctor - move" << std::endl;
+		std::cout << "pair ctor - move - template" << std::endl;
 	}
 
 	my_pair_type( my_pair_type const& other )
@@ -469,13 +477,15 @@ int main( /* int argc, char* argv[] */ )
 
 		//--------
 
-		//pair_type_5 p6 ("list", { "val1", "val2", "val3" } );
 		pair_type_4 p6_b ("list",  { "val1", "val2", "val3" }  );
-
-		//pair_type_5 p7 ("list", my_vector_type<string>() );
-
 		//pair_type_4 p7_b ("list", my_vector_type<string>() );
 
+
+		//pair_type_5 p6 ("list", { "val1", "val2", "val3" } );
+		//pair_type_5 p7 ("list", my_vector_type<string>() );
+
+
+		//std::piecewise_construct,
 
 
 //		my_vector_type<string> mvs;
