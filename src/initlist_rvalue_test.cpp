@@ -55,11 +55,19 @@ struct my_pair
 	T t_;
 	U u_;
 
+<<<<<<< HEAD
+//	my_pair( T const& t, U const& u )
+//		: t_( t ), u_( u )
+//	{
+//		std::cout << "pair ctor" << std::endl;
+//	}
+=======
 	//my_pair( T const& t, U const& u )
 	//	: t_( t ), u_( u )
 	//{
 	//	std::cout << "pair ctor" << std::endl;
 	//}
+>>>>>>> 048a2f44bd48382e6a78e8e34697e41f4722843a
 
 //	my_pair( T && t, U && u )
 //		: t_( std::forward<T>(t) ), u_( std::forward<U>(u) )
