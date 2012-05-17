@@ -3,66 +3,36 @@
 // g++ -std=c++11 class.conv.ctor.cpp
 // g++ -std=c++98 class.conv.ctor.cpp
 
+
 //#include <iostream>
-#include <initializer_list>
 #include <string>
 #include <utility>
 
-struct my_type
+struct like_std_string
 {
-	my_type( std::initializer_list<int> il );
-	my_type( std::initializer_list<double> il );
-		
-	my_type( int i1, int i2 );
-	my_type( double d1, double d2 );
-	my_type( char c1, char c2 );
-	
+  template<class InputIterator>
+  like_std_string(InputIterator begin, InputIterator end);      // This is a converting constructor.
 };
 
+struct my_string
+{
+  template<class InputIterator>
+  explicit my_string(InputIterator begin, InputIterator end);   // This is *not* a converting constructor.
+};
+
+void foo( like_std_string ); //{}
+void foo( std::pair<std::string, std::string> ); //{}
+
+void bar( my_string ); //{}
+void bar( std::pair<std::string, std::string> ); //{}
 
 int main( /* int argc, char* argv[] */ )
 {
-	
-	//my_type mt1 = {1, 2};			//copy-list-initialization
-	//my_type mt2 {1, 2};
-	my_type mt3 {1.0, 2.0};
-	//my_type mt3 {'a', 'b'};
+  foo( {"k0", "v0"} );	//ambiguous
+  bar( {"k0", "v0"} );	// *not* ambiguous, I think!
 
   return 0;
 }
-
-
-
-
-////#include <iostream>
-//#include <string>
-//#include <utility>
-//
-//struct like_std_string
-//{
-//  template<class InputIterator>
-//  like_std_string(InputIterator begin, InputIterator end);      // This is a converting constructor.
-//};
-//
-//struct my_string
-//{
-//  template<class InputIterator>
-//  explicit my_string(InputIterator begin, InputIterator end);   // This is *not* a converting constructor.
-//};
-//
-//void foo( like_std_string ); //{}
-//void foo( std::pair<std::string, std::string> ); //{}
-//
-//void bar( my_string ); //{}
-//void bar( std::pair<std::string, std::string> ); //{}
-//
-//int main( /* int argc, char* argv[] */ )
-//{
-//  foo( {"k0", "v0"} );	//ambiguous
-//  bar( {"k0", "v0"} );	// *not* ambiguous, I think!
-//
-//  return 0;
-//}
 
 
 
